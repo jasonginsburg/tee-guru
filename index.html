@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tee Guru — Sunningdale</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳️</text></svg>">
+<style>
+:root{
+  --green:#14532d; --green-mid:#1e7a43; --green-lite:#dcefe2;
+  --ink:#1a1f1c; --muted:#68756d; --line:#dde5df; --bg:#f4f7f4; --card:#ffffff;
+  --warn:#b45309; --warn-bg:#fef3c7; --bad:#b91c1c; --ok:#15803d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;-webkit-font-smoothing:antialiased}
+header{background:var(--green);color:#fff;padding:14px 16px 0;position:sticky;top:0;z-index:20}
+header h1{font-size:19px;font-weight:700;letter-spacing:.2px}
+header .sub{font-size:12px;opacity:.75;margin-top:1px}
+nav{display:flex;gap:2px;margin-top:12px}
+nav button{flex:1;background:none;border:none;color:#fff;opacity:.65;font-size:14px;font-weight:600;padding:10px 4px;border-bottom:3px solid transparent;cursor:pointer}
+nav button.active{opacity:1;border-bottom-color:#fff}
+main{max-width:640px;margin:0 auto;padding:14px 12px 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+button.btn{background:var(--green);color:#fff;border:none;border-radius:9px;padding:11px 16px;font-size:15px;font-weight:600;cursor:pointer}
+button.btn.sec{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+button.btn:disabled{opacity:.45}
+input[type=date]{border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:15px;background:#fff}
+.seg{display:flex;border:1.5px solid var(--green);border-radius:9px;overflow:hidden}
+.seg button{background:#fff;border:none;padding:9px 14px;font-size:14px;font-weight:600;color:var(--green);cursor:pointer}
+.seg button.active{background:var(--green);color:#fff}
+.totals{display:flex;gap:10px;margin-bottom:12px}
+.tot{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center}
+.tot .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.tot .val{font-size:20px;font-weight:700;margin-top:2px}
+.tot .delta{font-size:12px;color:var(--muted)}
+.tot.bad .val,.tot.bad .delta{color:var(--bad)}
+.warnbox{background:var(--warn-bg);border:1px solid #f2d9a4;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px;color:var(--warn);display:none}
+.warnbox ul{margin-left:18px}
+.warnbox li{margin:2px 0}
+.savedband{background:var(--green-lite);border:1px solid #b7d9c3;color:var(--green);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px;display:none;align-items:center;justify-content:space-between}
+.hole{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.hole .top{display:flex;align-items:center;gap:10px}
+.hnum{font-size:17px;font-weight:800;width:30px;color:var(--green)}
+.hmeta{font-size:12px;color:var(--muted);flex:1;line-height:1.3}
+.chip{display:inline-block;background:var(--green-lite);color:var(--green);font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px;vertical-align:1px}
+.pads{display:flex;gap:6px}
+.pad{width:46px;height:42px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;position:relative}
+.pad small{display:block;font-size:9px;font-weight:600;color:var(--muted);margin-top:-2px}
+.pad.off{border-style:dashed;color:#b6c0ba}
+.pad.off small{color:#c4ccc7}
+.pad.sel{background:var(--green);border-color:var(--green);color:#fff}
+.pad.sel small{color:#cfe6d8}
+.lockbtn{width:38px;height:42px;border-radius:9px;border:1.5px solid var(--line);background:#fff;font-size:16px;cursor:pointer;opacity:.45}
+.lockbtn.locked{opacity:1;border-color:var(--warn);background:var(--warn-bg)}
+.hnote{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.35}
+.disabledday .pad,.disabledday .lockbtn{pointer-events:none;opacity:.55}
+.disabledday .pad.sel{opacity:1}
+h2{font-size:16px;margin:16px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+td:first-child,th:first-child{text-align:left}
+.set-hole{border-top:2px solid var(--line);padding:10px 0}
+.set-hole .hd{font-weight:700;font-size:15px;margin-bottom:6px;color:var(--green)}
+.set-grid{display:grid;grid-template-columns:34px 1fr 1fr 1fr;gap:6px;align-items:center;font-size:13px}
+.set-grid input[type=number]{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 6px;font-size:14px;text-align:center}
+.set-grid .colhd{font-size:11px;color:var(--muted);text-align:center;font-weight:600}
+.set-grid label.on{display:flex;justify-content:center}
+.rule-grid{display:grid;grid-template-columns:1fr 84px;gap:8px;align-items:center;font-size:14px}
+.rule-grid input{border:1px solid var(--line);border-radius:7px;padding:8px;font-size:14px;text-align:center;width:100%}
+.hist-item{padding:10px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
+.hist-item .d{font-weight:700}
+.hist-item .s{font-size:12px;color:var(--muted)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50;max-width:90%}
+.toast.show{opacity:1}
+.fab{position:fixed;bottom:16px;left:0;right:0;display:flex;justify-content:center;gap:10px;padding:0 14px;z-index:30}
+.fab button{box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.muted{color:var(--muted);font-size:13px;line-height:1.45}
+.spin{text-align:center;padding:40px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>⛳️ Tee Guru</h1>
+  <div class="sub">Sunningdale · Blue tee planner</div>
+  <nav>
+    <button id="tab-plan" class="active" onclick="showTab('plan')">Plan</button>
+    <button id="tab-history" onclick="showTab('history')">History</button>
+    <button id="tab-settings" onclick="showTab('settings')">Settings</button>
+  </nav>
+</header>
+<main>
+  <div id="view-plan">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="seg" id="modeSeg">
+          <button id="mode-single" class="active" onclick="setMode('single')">Single day</button>
+          <button id="mode-weekend" onclick="setMode('weekend')">Weekend</button>
+        </div>
+        <input type="date" id="datePick" onchange="onDateChange()">
+      </div>
+      <div class="row" id="wkndRow" style="display:none;margin-top:10px">
+        <div class="seg" style="flex:1">
+          <button id="wk-0" class="active" style="flex:1" onclick="setWkDay(0)">Saturday</button>
+          <button id="wk-1" style="flex:1" onclick="setWkDay(1)">Sunday</button>
+        </div>
+      </div>
+    </div>
+    <div class="totals">
+      <div class="tot" id="totBlue"><div class="lbl">Blue</div><div class="val">–</div><div class="delta"></div></div>
+      <div class="tot" id="totHy"><div class="lbl">Hybrid</div><div class="val">–</div><div class="delta"></div></div>
+      <div class="tot" id="totA"><div class="lbl">Pads on A</div><div class="val">–</div><div class="delta"></div></div>
+    </div>
+    <div class="savedband" id="savedBand"><span>✅ This day is saved.</span><button class="btn sec" style="padding:7px 12px;font-size:13px" onclick="unlockDay()">Edit day</button></div>
+    <div class="warnbox" id="warnBox"><strong>Heads up</strong><ul id="warnList"></ul></div>
+    <div id="holeList" class="spin">Loading…</div>
+    <div class="fab" id="fabRow">
+      <button class="btn sec" id="genBtn" onclick="doGenerate()">🎲 Generate</button>
+      <button class="btn" id="saveBtn" onclick="saveDay()">Save</button>
+    </div>
+  </div>
+
+  <div id="view-history" style="display:none">
+    <div class="card"><h2 style="margin-top:0">Saved days</h2><div id="histList" class="muted">Loading…</div></div>
+    <div class="card"><h2 style="margin-top:0">Season: actual vs target</h2>
+      <div class="muted" style="margin-bottom:8px">Share of saved days on each pad — actual% (target%).</div>
+      <div style="overflow-x:auto"><table id="statTable"></table></div>
+    </div>
+  </div>
+
+  <div id="view-settings" style="display:none">
+    <div class="card">
+      <h2 style="margin-top:0">Rules</h2>
+      <div class="rule-grid" id="ruleGrid"></div>
+      <div class="muted" style="margin-top:10px">Back-pad group: holes 2, 5, 6, 7, 9, 13, 16, 18 · Hybrid A-cap group: 1, 2, 7, 8, 14 · Par-3 pair: 3 &amp; 8.</div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">Holes — pad %, yardage, availability</h2>
+      <div class="muted">Percentages are the target mix per hole (should total 100). Yardages start as the posted scorecard number for every pad — replace with real pad yardages when you have them and the total-yardage checks come alive. Unchecking a pad removes it from the generator (it stays tappable for manual picks).</div>
+      <div id="setHoles"></div>
+    </div>
+    <div class="fab"><button class="btn" onclick="saveSettings()">Save settings</button></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const SB_URL = 'https://tkgmuxjrecmyjzissgue.supabase.co/rest/v1';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRrZ211eGpyZWNteWp6aXNzZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NTM5NDMsImV4cCI6MjA5MTMyOTk0M30.70U1ynQSy906WWC7TE-z44i5Zn-b8WpuAIZ5rrwQu78';
+const PADS = ['A','B','C'];
+
+async function sb(path, opts={}) {
+  const r = await fetch(`${SB_URL}/${path}`, {
+    ...opts,
+    headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json',
+      'Prefer': opts.method === 'POST' ? 'resolution=merge-duplicates,return=representation' : 'return=representation',
+      ...(opts.headers||{}) }
+  });
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
+
+let HOLES = [], RULES = null, SAVED_DAYS = [];
+let mode = 'single', wkIdx = 0;
+// work[date] = {assignments:{hole:pad}, locks:{hole:true}, status, editing}
+const work = {};
+
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function addDays(iso,n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function dow(iso){ return new Date(iso+'T12:00:00').getDay(); }
+function nextSaturday(){ const t=todayISO(); const off=(6-dow(t)+7)%7; return addDays(t,off); }
+function fmtDate(iso){ return new Date(iso+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
+
+function activeDate(){
+  if (mode==='single') return document.getElementById('datePick').value;
+  const sat = document.getElementById('datePick').value;
+  return wkIdx===0 ? sat : addDays(sat,1);
+}
+function getWork(date){
+  if (!work[date]) work[date] = {assignments:{}, locks:{}, status:'new', editing:true};
+  return work[date];
+}
+
+async function loadAll(){
+  const [holes, cfg, days] = await Promise.all([
+    sb('tee_holes?select=*&order=hole'),
+    sb('tee_config?id=eq.rules&select=data'),
+    sb('tee_days?select=*&order=day.desc&limit=400')
+  ]);
+  HOLES = holes; RULES = cfg[0].data; SAVED_DAYS = days;
+  await loadDay(activeDate());
+  renderPlan(); renderSettings(); renderHistory();
+}
+
+async function loadDay(date){
+  if (work[date] && work[date].loaded) return;
+  const rows = SAVED_DAYS.filter(d=>d.day===date);
+  let row = rows[0];
+  if (!row) { try { const r = await sb(`tee_days?day=eq.${date}&select=*`); row = r[0]; } catch(e){} }
+  if (row) work[date] = {assignments:{...row.assignments}, locks:{...row.locks}, status:row.status, editing:row.status!=='saved', loaded:true};
+  else work[date] = {assignments:{}, locks:{}, status:'new', editing:true, loaded:true};
+}
+
+/* ---------- stats & generator ---------- */
+function seasonActuals(){
+  const yr = todayISO().slice(0,4);
+  const days = SAVED_DAYS.filter(d=>d.status==='saved' && d.day.slice(0,4)===yr);
+  const counts = {}; // hole -> pad -> n
+  for (const h of HOLES) counts[h.hole] = {A:0,B:0,C:0,n:0};
+  for (const d of days) for (const [h,p] of Object.entries(d.assignments||{})) {
+    if (counts[h] && counts[h][p]!==undefined){ counts[h][p]++; counts[h].n++; }
+  }
+  return counts;
+}
+
+function weightsFor(hole, actuals){
+  const w = {};
+  for (const p of PADS) {
+    const pad = hole.pads[p];
+    if (!pad || !pad.on || pad.pct<=0) { w[p]=0; continue; }
+    let act = pad.pct;
+    const c = actuals[hole.hole];
+    if (c && c.n>0) act = c[p]/c.n*100;
+    w[p] = Math.max(0, pad.pct + (RULES.nudge||1)*(pad.pct-act));
+  }
+  if (PADS.every(p=>w[p]===0)) for (const p of PADS) w[p] = hole.pads[p]?.on ? hole.pads[p].pct : 0;
+  return w;
+}
+function sample(w, exclude){
+  const opts = PADS.filter(p=>w[p]>0 && !(exclude&&exclude.has(p)));
+  if (!opts.length) return PADS.filter(p=>w[p]>0)[0] || 'B';
+  let tot = opts.reduce((s,p)=>s+w[p],0), r = Math.random()*tot;
+  for (const p of opts){ r -= w[p]; if (r<=0) return p; }
+  return opts[opts.length-1];
+}
+function bestNonA(hole, w){
+  const opts = PADS.filter(p=>p!=='A' && hole.pads[p].on && hole.pads[p].pct>0);
+  if (!opts.length) return 'B';
+  return opts.sort((a,b)=>w[b]-w[a])[0];
+}
+function evenSplit(hole){
+  const ps = PADS.map(p=>hole.pads[p]).filter(x=>x.on&&x.pct>0).map(x=>x.pct).sort((a,b)=>b-a);
+  return ps.length>=2 && (ps[0]-ps[1]) <= (RULES.flipWindowPct??15);
+}
+
+function wpick(cands, wfn){  // weighted random pick — keeps repairs from skewing the mix
+  const ws = cands.map(h=>Math.max(wfn(h), 0.01));
+  let r = Math.random()*ws.reduce((a,b)=>a+b,0);
+  for (let i=0;i<cands.length;i++){ r -= ws[i]; if (r<=0) return cands[i]; }
+  return cands[cands.length-1];
+}
+
+function generate(date, prevAsg){
+  const wk = getWork(date), actuals = seasonActuals();
+  const asg = {...wk.assignments}, locks = wk.locks;
+  const W = {}, ban = {};   // ban[hole] = Set of pads excluded by weekend pair rules
+  for (const h of HOLES){
+    W[h.hole] = weightsFor(h, actuals);
+    ban[h.hole] = new Set();
+    if (prevAsg){
+      const prev = prevAsg[h.hole];
+      if (prev){
+        const pct = h.pads[prev]?.pct ?? 0;
+        if (pct>0 && pct <= (RULES.rareMaxPct??20)) ban[h.hole].add(prev);   // rare pad: not both weekend days
+        if (evenSplit(h)) ban[h.hole].add(prev);                              // even-split hole: flip for day 2
+      }
+    }
+    if (locks[h.hole] && asg[h.hole]) continue;
+    asg[h.hole] = sample(W[h.hole], ban[h.hole]);
+  }
+  const okPad = (h,p) => { const hh=holeByNum(h); return hh.pads[p].on && hh.pads[p].pct>0 && !ban[h].has(p); };
+  const anyPad = (h,p) => { const hh=holeByNum(h); return hh.pads[p].on && hh.pads[p].pct>0; };
+  const moveOff = (h,from) => {   // weighted re-sample to any allowed pad other than `from`
+    let opts = PADS.filter(p=>p!==from && okPad(h,p));
+    // weekend flip/rare bans are soft ("ideally"); the count caps are hard — break a ban if cornered
+    if (!opts.length) opts = PADS.filter(p=>p!==from && anyPad(h,p));
+    if (!opts.length) return false;
+    asg[h] = wpick(opts, p=>W[h][p]);
+    return true;
+  };
+  // repair loop for count rules
+  const g = RULES.aGroup, hy = RULES.hybridA, [p3a,p3b] = RULES.par3Pair;
+  const canMove = h => !locks[h];
+  for (let i=0;i<20;i++){
+    let changed=false;
+    const hybA = hy.holes.filter(h=>asg[h]==='A');
+    if (hybA.length > hy.max){
+      const cand = hybA.filter(h=>canMove(h) && PADS.some(p=>p!=='A'&&anyPad(h,p)));
+      if (cand.length){ const h = wpick(cand, h=>100-W[h].A); if (moveOff(h,'A')) changed=true; }
+    }
+    const onA = g.holes.filter(h=>asg[h]==='A');
+    if (onA.length < g.min){
+      const cand = g.holes.filter(h=>asg[h]!=='A'&&canMove(h)&&okPad(h,'A')
+        && !(hy.holes.includes(h) && hy.holes.filter(x=>asg[x]==='A').length>=hy.max));
+      if (cand.length){ const h = wpick(cand, h=>W[h].A); asg[h]='A'; changed=true; }
+    } else if (onA.length > g.max){
+      const cand = onA.filter(h=>canMove(h) && PADS.some(p=>p!=='A'&&anyPad(h,p)));
+      if (cand.length){ const h = wpick(cand, h=>100-W[h].A); if (moveOff(h,'A')) changed=true; }
+    } else {
+      for (const side of ['front','back']){
+        if (!onA.some(h=>g[side].includes(h))){
+          const cand = g[side].filter(h=>asg[h]!=='A'&&canMove(h)&&okPad(h,'A')
+            && !(hy.holes.includes(h) && hy.holes.filter(x=>asg[x]==='A').length>=hy.max));
+          const drop = onA.filter(h=>!g[side].includes(h)&&canMove(h)&&PADS.some(p=>p!=='A'&&okPad(h,p)));
+          if (cand.length && (onA.length<g.max || drop.length)){
+            if (onA.length>=g.max && drop.length){ const d=wpick(drop, h=>100-W[h].A); moveOff(d,'A'); }
+            const h = wpick(cand, h=>W[h].A); asg[h]='A'; changed=true;
+          }
+        }
+      }
+    }
+    if (asg[p3a] && asg[p3a]===asg[p3b]){
+      // moving a hole onto A must not blow the A-count caps of the groups it belongs to
+      const optsFor = h => PADS.filter(p=>p!==asg[h] && okPad(h,p)
+        && !(p==='A' && hy.holes.includes(h) && hy.holes.filter(x=>asg[x]==='A').length>=hy.max)
+        && !(p==='A' && g.holes.includes(h) && g.holes.filter(x=>asg[x]==='A').length>=g.max));
+      const movable = [p3a,p3b].filter(h=>canMove(h) && optsFor(h).length);
+      if (movable.length){
+        const h = movable.length===2 ? movable[Math.random()<0.5?0:1] : movable[0];
+        asg[h] = wpick(optsFor(h), p=>W[h][p]);
+        changed=true;
+      }
+    }
+    if (!changed) break;
+  }
+  wk.assignments = asg;
+}
+
+function holeByNum(n){ return HOLES.find(h=>h.hole===Number(n)); }
+
+function totals(asg){
+  let blue=0, hy=0, nset=0;
+  for (const h of HOLES){
+    const p = asg[h.hole];
+    const y = p ? (h.pads[p]?.yds ?? h.blue_posted) : null;
+    if (p) nset++;
+    blue += y ?? h.blue_posted;
+    hy += RULES.hybridBlueHoles.includes(h.hole) ? (y ?? h.blue_posted) : h.white_posted;
+  }
+  return {blue, hy, nset};
+}
+
+function warningsFor(date){
+  const wk = getWork(date), asg = wk.assignments, out=[];
+  const g=RULES.aGroup, hyr=RULES.hybridA, [a,b]=RULES.par3Pair, tol=RULES.yardTolerance??40;
+  const onA = g.holes.filter(h=>asg[h]==='A');
+  const {blue,hy,nset} = totals(asg);
+  if (nset<18) out.push(`${18-nset} hole${18-nset>1?'s':''} not set yet.`);
+  if (nset===18){
+    if (onA.length<g.min) out.push(`Only ${onA.length} of the back-pad group (2,5,6,7,9,13,16,18) on A — target is ${g.min}–${g.max}.`);
+    if (onA.length>g.max) out.push(`${onA.length} of the back-pad group on A — target is ${g.min}–${g.max}.`);
+    if (onA.length>=g.min){
+      if (!onA.some(h=>g.front.includes(h))) out.push('All the A pads in the group are on the back nine — put at least one out front.');
+      if (!onA.some(h=>g.back.includes(h))) out.push('All the A pads in the group are on the front nine — put at least one on the back.');
+    }
+    const hybA = hyr.holes.filter(h=>asg[h]==='A');
+    if (hybA.length>hyr.max) out.push(`${hybA.length} of the Hybrid big-difference holes (1,2,7,8,14) on A — max is ${hyr.max}.`);
+    if (asg[a] && asg[a]===asg[b]) out.push(`Holes ${a} and ${b} are on the same pad — they may play the same distance.`);
+    if (Math.abs(blue-RULES.posted.blue)>tol) out.push(`Blue total ${blue} is ${blue>RULES.posted.blue?'+':''}${blue-RULES.posted.blue} vs posted ${RULES.posted.blue}.`);
+    if (Math.abs(hy-RULES.posted.hybrid)>tol) out.push(`Hybrid total ${hy} is ${hy>RULES.posted.hybrid?'+':''}${hy-RULES.posted.hybrid} vs posted ${RULES.posted.hybrid}.`);
+  }
+  for (const h of HOLES){
+    const p = asg[h.hole];
+    if (p && (!h.pads[p].on)) out.push(`Hole ${h.hole} is on pad ${p}, which is marked unavailable.`);
+  }
+  // weekend cross-day checks
+  if (mode==='weekend'){
+    const sat = document.getElementById('datePick').value, sun = addDays(sat,1);
+    const wa = work[sat]?.assignments||{}, wb = work[sun]?.assignments||{};
+    for (const h of HOLES){
+      const pa=wa[h.hole], pb=wb[h.hole];
+      if (!pa||!pb) continue;
+      const pct = h.pads[pa]?.pct??0;
+      if (pa===pb && pct>0 && pct<=(RULES.rareMaxPct??20)) out.push(`Hole ${h.hole} is on rare pad ${pa} both weekend days.`);
+      if (pa===pb && evenSplit(h)) out.push(`Hole ${h.hole} (even-split hole) didn't flip between Sat and Sun.`);
+    }
+  }
+  return out;
+}
+
+/* ---------- plan rendering ---------- */
+function renderPlan(){
+  const date = activeDate(), wk = getWork(date);
+  const asg = wk.assignments, locked = wk.status==='saved' && !wk.editing;
+  const list = document.getElementById('holeList');
+  list.className = locked ? 'disabledday' : '';
+  list.innerHTML = HOLES.map(h=>{
+    const p = asg[h.hole];
+    const yds = p ? (h.pads[p]?.yds ?? h.blue_posted) : h.blue_posted;
+    return `<div class="hole">
+      <div class="top">
+        <div class="hnum">${h.hole}</div>
+        <div class="hmeta">Par ${h.par} · ${yds} yds ${h.hybrid_blue?'<span class="chip">HY-BLUE</span>':''}</div>
+        <div class="pads">${PADS.map(pp=>`
+          <button class="pad ${p===pp?'sel':''} ${h.pads[pp].on?'':'off'}" onclick="pickPad(${h.hole},'${pp}')">${pp}<small>${h.pads[pp].pct}%</small></button>`).join('')}
+        </div>
+        <button class="lockbtn ${wk.locks[h.hole]?'locked':''}" title="Lock this hole" onclick="toggleLock(${h.hole})">${wk.locks[h.hole]?'🔒':'🔓'}</button>
+      </div>
+      ${h.note?`<div class="hnote">${h.note}</div>`:''}
+    </div>`;
+  }).join('');
+  const {blue,hy,nset} = totals(asg);
+  const setTot = (id,val,posted)=>{
+    const el = document.getElementById(id);
+    el.querySelector('.val').textContent = nset ? val : '–';
+    const d = val - posted;
+    el.querySelector('.delta').textContent = nset===18 ? `${d>=0?'+':''}${d} vs ${posted}` : `${nset}/18 set`;
+    el.classList.toggle('bad', nset===18 && Math.abs(d)>(RULES.yardTolerance??40));
+  };
+  setTot('totBlue',blue,RULES.posted.blue);
+  setTot('totHy',hy,RULES.posted.hybrid);
+  const aCount = RULES.aGroup.holes.filter(h=>asg[h]==='A').length;
+  const tA = document.getElementById('totA');
+  tA.querySelector('.val').textContent = `${aCount}`;
+  tA.querySelector('.delta').textContent = `target ${RULES.aGroup.min}–${RULES.aGroup.max}`;
+  tA.classList.toggle('bad', nset===18 && (aCount<RULES.aGroup.min||aCount>RULES.aGroup.max));
+
+  const warns = warningsFor(date);
+  document.getElementById('warnBox').style.display = warns.length?'block':'none';
+  document.getElementById('warnList').innerHTML = warns.map(w=>`<li>${w}</li>`).join('');
+  document.getElementById('savedBand').style.display = locked?'flex':'none';
+  document.getElementById('genBtn').disabled = locked;
+  document.getElementById('saveBtn').disabled = locked;
+  document.getElementById('genBtn').textContent = mode==='weekend' ? '🎲 Generate weekend' : '🎲 Generate';
+  document.getElementById('wk-0').textContent = mode==='weekend' ? `Sat ${fmtDate(document.getElementById('datePick').value).replace(/^\w+, /,'')}` : 'Saturday';
+  document.getElementById('wk-1').textContent = mode==='weekend' ? `Sun ${fmtDate(addDays(document.getElementById('datePick').value,1)).replace(/^\w+, /,'')}` : 'Sunday';
+}
+
+function pickPad(hole,p){ const wk=getWork(activeDate()); wk.assignments[hole]=p; renderPlan(); }
+function toggleLock(hole){ const wk=getWork(activeDate()); wk.locks[hole]=!wk.locks[hole]; if(!wk.locks[hole]) delete wk.locks[hole]; renderPlan(); }
+function unlockDay(){ getWork(activeDate()).editing = true; renderPlan(); }
+
+async function doGenerate(){
+  if (mode==='single'){ generate(activeDate()); }
+  else {
+    const sat = document.getElementById('datePick').value, sun = addDays(sat,1);
+    await loadDay(sat); await loadDay(sun);
+    generate(sat);
+    generate(sun, work[sat].assignments);
+  }
+  renderPlan();
+}
+
+async function saveDay(){
+  const dates = mode==='single' ? [activeDate()] : [document.getElementById('datePick').value, addDays(document.getElementById('datePick').value,1)];
+  for (const d of dates){
+    const wk = getWork(d);
+    if (Object.keys(wk.assignments).length===0) continue;
+    await sb('tee_days', {method:'POST', body: JSON.stringify({day:d, assignments:wk.assignments, locks:wk.locks, status:'saved', updated_at:new Date().toISOString()})});
+    wk.status='saved'; wk.editing=false;
+    SAVED_DAYS = SAVED_DAYS.filter(x=>x.day!==d).concat([{day:d, assignments:wk.assignments, locks:wk.locks, status:'saved'}]);
+    SAVED_DAYS.sort((x,y)=>y.day.localeCompare(x.day));
+  }
+  toast(mode==='single' ? 'Day saved ✅' : 'Weekend saved ✅');
+  renderPlan(); renderHistory();
+}
+
+function setMode(m){
+  mode=m;
+  document.getElementById('mode-single').classList.toggle('active',m==='single');
+  document.getElementById('mode-weekend').classList.toggle('active',m==='weekend');
+  document.getElementById('wkndRow').style.display = m==='weekend'?'flex':'none';
+  if (m==='weekend'){ document.getElementById('datePick').value = nextSaturday(); wkIdx=0; setWkDay(0,true); }
+  onDateChange();
+}
+function setWkDay(i,skip){ wkIdx=i;
+  document.getElementById('wk-0').classList.toggle('active',i===0);
+  document.getElementById('wk-1').classList.toggle('active',i===1);
+  if(!skip) onDateChange();
+}
+async function onDateChange(){
+  if (mode==='weekend'){
+    const v = document.getElementById('datePick').value;
+    if (dow(v)!==6){ const off=(6-dow(v)+7)%7; document.getElementById('datePick').value = addDays(v,off); }
+    await loadDay(document.getElementById('datePick').value);
+    await loadDay(addDays(document.getElementById('datePick').value,1));
+  } else await loadDay(activeDate());
+  renderPlan();
+}
+
+/* ---------- history ---------- */
+function renderHistory(){
+  const days = SAVED_DAYS.filter(d=>d.status==='saved');
+  const el = document.getElementById('histList');
+  el.innerHTML = days.length ? days.slice(0,60).map(d=>{
+    const aH = Object.entries(d.assignments).filter(([h,p])=>p==='A').map(([h])=>h);
+    return `<div class="hist-item" onclick="openDay('${d.day}')">
+      <div><div class="d">${fmtDate(d.day)}</div><div class="s">A pads: ${aH.length? 'holes '+aH.join(', ') : 'none'}</div></div>
+      <div class="s">›</div></div>`;
+  }).join('') : 'No saved days yet.';
+  const counts = seasonActuals();
+  const n = Math.max(...HOLES.map(h=>counts[h.hole].n), 0);
+  let rows = `<tr><th>Hole</th><th>A</th><th>B</th><th>C</th></tr>`;
+  for (const h of HOLES){
+    const c = counts[h.hole];
+    rows += `<tr><td><b>${h.hole}</b></td>` + PADS.map(p=>{
+      if (!h.pads[p].on && h.pads[p].pct===0) return '<td>—</td>';
+      const act = c.n? Math.round(c[p]/c.n*100) : null;
+      return `<td>${act===null?'–':act+'%'} <span style="color:var(--muted)">(${h.pads[p].pct}%)</span></td>`;
+    }).join('') + '</tr>';
+  }
+  document.getElementById('statTable').innerHTML = rows;
+}
+async function openDay(d){ showTab('plan'); mode='single'; setModeButtons(); document.getElementById('datePick').value=d; await loadDay(d); renderPlan(); }
+function setModeButtons(){ document.getElementById('mode-single').classList.add('active'); document.getElementById('mode-weekend').classList.remove('active'); document.getElementById('wkndRow').style.display='none'; }
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  const rg = document.getElementById('ruleGrid');
+  rg.innerHTML = `
+    <div>Back-pad group: min on A</div><input type="number" id="r-amin" value="${RULES.aGroup.min}">
+    <div>Back-pad group: max on A</div><input type="number" id="r-amax" value="${RULES.aGroup.max}">
+    <div>Hybrid group: max on A</div><input type="number" id="r-hymax" value="${RULES.hybridA.max}">
+    <div>Yardage tolerance (± yds)</div><input type="number" id="r-tol" value="${RULES.yardTolerance}">
+    <div>"Rare pad" threshold (%)</div><input type="number" id="r-rare" value="${RULES.rareMaxPct}">
+    <div>"Even split" window (%)</div><input type="number" id="r-flip" value="${RULES.flipWindowPct}">
+    <div>Nudge strength (0 = pure random)</div><input type="number" step="0.1" id="r-nudge" value="${RULES.nudge}">`;
+  document.getElementById('setHoles').innerHTML = HOLES.map(h=>`
+    <div class="set-hole" data-hole="${h.hole}">
+      <div class="hd">Hole ${h.hole} <span style="font-weight:400;color:var(--muted);font-size:12px">par ${h.par} · posted ${h.blue_posted} ${h.hybrid_blue?'· HY-BLUE':''}</span></div>
+      <div class="set-grid">
+        <div></div><div class="colhd">A (back)</div><div class="colhd">B</div><div class="colhd">C (front)</div>
+        <div class="colhd">On</div>${PADS.map(p=>`<label class="on"><input type="checkbox" data-f="on" data-p="${p}" ${h.pads[p].on?'checked':''}></label>`).join('')}
+        <div class="colhd">%</div>${PADS.map(p=>`<input type="number" data-f="pct" data-p="${p}" value="${h.pads[p].pct}">`).join('')}
+        <div class="colhd">Yds</div>${PADS.map(p=>`<input type="number" data-f="yds" data-p="${p}" value="${h.pads[p].yds}">`).join('')}
+      </div>
+    </div>`).join('');
+}
+async function saveSettings(){
+  try {
+    RULES.aGroup.min = +document.getElementById('r-amin').value;
+    RULES.aGroup.max = +document.getElementById('r-amax').value;
+    RULES.hybridA.max = +document.getElementById('r-hymax').value;
+    RULES.yardTolerance = +document.getElementById('r-tol').value;
+    RULES.rareMaxPct = +document.getElementById('r-rare').value;
+    RULES.flipWindowPct = +document.getElementById('r-flip').value;
+    RULES.nudge = +document.getElementById('r-nudge').value;
+    await sb('tee_config?id=eq.rules', {method:'PATCH', body: JSON.stringify({data:RULES})});
+    for (const el of document.querySelectorAll('.set-hole')){
+      const hole = +el.dataset.hole, h = holeByNum(hole);
+      for (const inp of el.querySelectorAll('[data-f]')){
+        const {f,p} = inp.dataset;
+        h.pads[p][f] = f==='on' ? inp.checked : +inp.value;
+      }
+      await sb(`tee_holes?hole=eq.${hole}`, {method:'PATCH', body: JSON.stringify({pads:h.pads})});
+    }
+    toast('Settings saved ✅');
+    renderPlan(); renderHistory();
+  } catch(e){ toast('Save failed: '+e.message); }
+}
+
+/* ---------- shell ---------- */
+function showTab(t){
+  for (const x of ['plan','history','settings']){
+    document.getElementById('view-'+x).style.display = x===t?'block':'none';
+    document.getElementById('tab-'+x).classList.toggle('active', x===t);
+  }
+  document.getElementById('fabRow').style.display = t==='plan'?'flex':'none';
+  if (t==='history') renderHistory();
+}
+let toastTimer;
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2600); }
+
+document.getElementById('datePick').value = todayISO();
+loadAll().catch(e=>{ document.getElementById('holeList').innerHTML = `<div class="card" style="color:var(--bad)">Couldn't load data: ${e.message}</div>`; });
+</script>
+</body>
+</html>
