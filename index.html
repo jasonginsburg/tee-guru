@@ -69,11 +69,15 @@ td:first-child,th:first-child{text-align:left}
 .set-grid input[type=number]{width:100%;border:1px solid var(--line);border-radius:7px;padding:7px 6px;font-size:14px;text-align:center}
 .set-grid .colhd{font-size:11px;color:var(--muted);text-align:center;font-weight:600}
 .set-grid label.on{display:flex;justify-content:center}
-.rule-grid{display:grid;grid-template-columns:1fr 84px;gap:8px;align-items:center;font-size:14px}
-.rule-grid input{border:1px solid var(--line);border-radius:7px;padding:8px;font-size:14px;text-align:center;width:100%}
-.rl{margin-top:10px}
-.rl label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-.rl input{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:14px}
+.rule{padding:11px 0;border-bottom:1px solid var(--line)}
+.rule:last-child{border-bottom:none}
+.rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.rt input[type=number]{width:58px;border:1px solid var(--line);border-radius:7px;padding:8px 4px;font-size:14px;text-align:center}
+.rt input[type=checkbox]{width:20px;height:20px;accent-color:var(--green)}
+.rt input.list{flex:1;min-width:140px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:14px;text-align:left}
+.qbtn{margin-left:auto;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer;flex-shrink:0}
+.rexp{display:none;margin-top:9px;font-size:13px;color:var(--muted);line-height:1.5;background:var(--bg);border-radius:8px;padding:9px 11px}
+.rexp.show{display:block}
 .hist-item{padding:10px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
 .hist-item .d{font-weight:700}
 .hist-item .s{font-size:12px;color:var(--muted)}
@@ -137,9 +141,8 @@ td:first-child,th:first-child{text-align:left}
   <div id="view-settings" style="display:none">
     <div class="card">
       <h2 style="margin-top:0">Rules</h2>
-      <div class="rule-grid" id="ruleGrid"></div>
-      <div id="ruleLists"></div>
-      <div class="muted" style="margin-top:10px">Hole lists are comma-separated (1–18). The front/back split of the back-pad group is figured automatically from the hole numbers.</div>
+      <div class="muted" style="margin-bottom:4px">Tap any ? for a plain-English explanation.</div>
+      <div id="ruleGrid"></div>
     </div>
     <div class="card">
       <h2 style="margin-top:0">Holes — pad %, yardage, availability</h2>
@@ -245,9 +248,9 @@ function bestNonA(hole, w){
   if (!opts.length) return 'B';
   return opts.sort((a,b)=>w[b]-w[a])[0];
 }
-function evenSplit(hole){
-  const ps = PADS.map(p=>hole.pads[p]).filter(x=>x.on&&x.pct>0).map(x=>x.pct).sort((a,b)=>b-a);
-  return ps.length>=2 && (ps[0]-ps[1]) <= (RULES.flipWindowPct??15);
+function unusualPad(hole, p){  // a pad at/below the weekend repeat line shouldn't be used both weekend days
+  const pct = hole.pads[p]?.pct ?? 0;
+  return pct>0 && pct <= (RULES.weekendRepeatMaxPct??60);
 }
 
 function wpick(cands, wfn){  // weighted random pick — keeps repairs from skewing the mix
@@ -266,11 +269,7 @@ function generate(date, prevAsg){
     ban[h.hole] = new Set();
     if (prevAsg){
       const prev = prevAsg[h.hole];
-      if (prev){
-        const pct = h.pads[prev]?.pct ?? 0;
-        if (pct>0 && pct <= (RULES.rareMaxPct??20)) ban[h.hole].add(prev);   // rare pad: not both weekend days
-        if (evenSplit(h)) ban[h.hole].add(prev);                              // even-split hole: flip for day 2
-      }
+      if (prev && unusualPad(h, prev)) ban[h.hole].add(prev);   // unusual spot: not both weekend days
     }
     if (locks[h.hole] && asg[h.hole]) continue;
     asg[h.hole] = sample(W[h.hole], ban[h.hole]);
@@ -349,9 +348,9 @@ function totals(asg){
 
 function warningsFor(date){
   const wk = getWork(date), asg = wk.assignments, out=[];
-  const g=RULES.aGroup, hyr=RULES.hybridA, [a,b]=RULES.par3Pair, tol=RULES.yardTolerance??40;
+  const g=RULES.aGroup, hyr=RULES.hybridA, [a,b]=RULES.par3Pair;
   const onA = g.holes.filter(h=>asg[h]==='A');
-  const {blue,hy,nset} = totals(asg);
+  const {nset} = totals(asg);
   if (nset<18) out.push(`${18-nset} hole${18-nset>1?'s':''} not set yet.`);
   if (nset===18){
     if (onA.length<g.min) out.push(`Only ${onA.length} of the back-pad group (${g.holes.join(', ')}) on A — target is ${g.min}–${g.max}.`);
@@ -364,8 +363,6 @@ function warningsFor(date){
     const hybA = hyr.holes.filter(h=>asg[h]==='A');
     if (hybA.length>hyr.max) out.push(`${hybA.length} of the Hybrid big-difference holes (${hyr.holes.join(', ')}) on A — max is ${hyr.max}.`);
     if (asg[a] && asg[a]===asg[b]) out.push(`Holes ${a} and ${b} are on the same pad — they may play the same distance.`);
-    if (Math.abs(blue-RULES.posted.blue)>tol) out.push(`Blue total ${blue} is ${blue>RULES.posted.blue?'+':''}${blue-RULES.posted.blue} vs posted ${RULES.posted.blue}.`);
-    if (Math.abs(hy-RULES.posted.hybrid)>tol) out.push(`Hybrid total ${hy} is ${hy>RULES.posted.hybrid?'+':''}${hy-RULES.posted.hybrid} vs posted ${RULES.posted.hybrid}.`);
   }
   for (const h of HOLES){
     const p = asg[h.hole];
@@ -378,9 +375,7 @@ function warningsFor(date){
     for (const h of HOLES){
       const pa=wa[h.hole], pb=wb[h.hole];
       if (!pa||!pb) continue;
-      const pct = h.pads[pa]?.pct??0;
-      if (pa===pb && pct>0 && pct<=(RULES.rareMaxPct??20)) out.push(`Hole ${h.hole} is on rare pad ${pa} both weekend days.`);
-      if (pa===pb && evenSplit(h)) out.push(`Hole ${h.hole} (even-split hole) didn't flip between Sat and Sun.`);
+      if (pa===pb && unusualPad(h, pa)) out.push(`Hole ${h.hole} is on pad ${pa} both weekend days — that's an unusual spot for that hole.`);
     }
   }
   return out;
@@ -413,7 +408,6 @@ function renderPlan(){
     el.querySelector('.val').textContent = nset ? val : '–';
     const d = val - posted;
     el.querySelector('.delta').textContent = nset===18 ? `${d>=0?'+':''}${d} vs ${posted}` : `${nset}/18 set`;
-    el.classList.toggle('bad', nset===18 && Math.abs(d)>(RULES.yardTolerance??40));
   };
   setTot('totBlue',blue,RULES.posted.blue);
   setTot('totHy',hy,RULES.posted.hybrid);
@@ -513,21 +507,26 @@ async function openDay(d){ showTab('plan'); mode='single'; setModeButtons(); doc
 function setModeButtons(){ document.getElementById('mode-single').classList.add('active'); document.getElementById('mode-weekend').classList.remove('active'); document.getElementById('wkndRow').style.display='none'; }
 
 /* ---------- settings ---------- */
+function toggleExp(btn){ btn.closest('.rule').querySelector('.rexp').classList.toggle('show'); }
 function renderSettings(){
-  const rg = document.getElementById('ruleGrid');
-  rg.innerHTML = `
-    <div>Back-pad group: min on A</div><input type="number" id="r-amin" value="${RULES.aGroup.min}">
-    <div>Back-pad group: max on A</div><input type="number" id="r-amax" value="${RULES.aGroup.max}">
-    <div>Hybrid group: max on A</div><input type="number" id="r-hymax" value="${RULES.hybridA.max}">
-    <div>Yardage tolerance (± yds)</div><input type="number" id="r-tol" value="${RULES.yardTolerance}">
-    <div>"Rare pad" threshold (%)</div><input type="number" id="r-rare" value="${RULES.rareMaxPct}">
-    <div>"Even split" window (%)</div><input type="number" id="r-flip" value="${RULES.flipWindowPct}">
-    <div>Nudge strength (0 = pure random)</div><input type="number" step="0.1" id="r-nudge" value="${RULES.nudge}">`;
-  document.getElementById('ruleLists').innerHTML = `
-    <div class="rl"><label>Back-pad group holes (the min/max-on-A rule)</label><input id="r-agroup" value="${RULES.aGroup.holes.join(', ')}"></div>
-    <div class="rl"><label>Hybrid A-cap group holes (the max-on-A rule)</label><input id="r-hygroup" value="${RULES.hybridA.holes.join(', ')}"></div>
-    <div class="rl"><label>Par-3 pair — keep on different pads</label><input id="r-pair" value="${RULES.par3Pair.join(', ')}"></div>
-    <div class="rl"><label>Hybrid course: holes that play the Blue tee</label><input id="r-hyblue" value="${RULES.hybridBlueHoles.join(', ')}"></div>`;
+  const rule = (top, exp) => `<div class="rule"><div class="rt">${top}<button class="qbtn" title="${exp.replace(/"/g,'&quot;')}" onclick="toggleExp(this)">?</button></div><div class="rexp">${exp}</div></div>`;
+  document.getElementById('ruleGrid').innerHTML =
+    rule(`<span>Holes on the back pad each day: between</span><input type="number" id="r-amin" value="${RULES.aGroup.min}"><span>and</span><input type="number" id="r-amax" value="${RULES.aGroup.max}">`,
+      `Each day, count how many holes from the "back-pad holes" list below have their tee all the way back (pad A). Keep that count between these two numbers — enough back tees that the course has teeth, not so many that it plays too long. The app also makes sure at least one of them is on the front nine and at least one on the back nine, so the length is spread out.`) +
+    rule(`<span>Hybrid-sensitive holes on the back pad: at most</span><input type="number" id="r-hymax" value="${RULES.hybridA.max}">`,
+      `On the Hybrid course, the holes in the "hybrid-sensitive" list below are where the blue tee position changes the hole the most. No more than this many of them should be all the way back on the same day, or the Hybrid course plays too long for the people it's meant for.`) +
+    rule(`<span>Weekend repeat line:</span><input type="number" id="r-wknd" value="${RULES.weekendRepeatMaxPct??60}"><span>%</span>`,
+      `A tee spot that's unusual for a hole shouldn't show up both Saturday and Sunday. "Unusual" means the pad's target percent is at or below this number. Example: hole 9's back pad is 20% — if it's back on Saturday, it won't be back on Sunday. A hole's everyday pad (say 91%) can repeat all weekend. The 50/50 holes flip — one day in each spot.`) +
+    rule(`<span>Learn from history</span><input type="checkbox" id="r-learn" ${RULES.nudge>0?'checked':''}>`,
+      `When on, the app keeps score of where the tees have actually been this season and leans away from pads that have come up more often than their target — so over the summer, real life ends up matching the percentages. When off, every day is a fresh dice roll and streaks can happen.`) +
+    rule(`<span>Back-pad holes:</span><input class="list" id="r-agroup" value="${RULES.aGroup.holes.join(', ')}">`,
+      `The holes the daily back-pad count (rule 1) applies to. Comma-separated hole numbers.`) +
+    rule(`<span>Hybrid-sensitive holes:</span><input class="list" id="r-hygroup" value="${RULES.hybridA.holes.join(', ')}">`,
+      `The holes the hybrid back-pad cap (rule 2) applies to. Comma-separated hole numbers.`) +
+    rule(`<span>Keep on different pads:</span><input class="list" id="r-pair" value="${RULES.par3Pair.join(', ')}">`,
+      `These two holes are never put on the same pad letter on the same day, so the par 3s play different lengths. If it happens anyway (because you locked them), you just get a warning you can ignore.`) +
+    rule(`<span>Hybrid course blue-tee holes:</span><input class="list" id="r-hyblue" value="${RULES.hybridBlueHoles.join(', ')}">`,
+      `On the Hybrid course, these holes play from the blue tees; all the others play from the whites. The app uses this list to figure the Hybrid total yardage each day.`);
   document.getElementById('setHoles').innerHTML = HOLES.map(h=>`
     <div class="set-hole" data-hole="${h.hole}">
       <div class="hd">Hole ${h.hole} <span style="font-weight:400;color:var(--muted);font-size:12px">par ${h.par} · posted ${h.blue_posted} ${RULES.hybridBlueHoles.includes(h.hole)?'· HY-BLUE':''}</span></div>
@@ -544,10 +543,9 @@ async function saveSettings(){
     RULES.aGroup.min = +document.getElementById('r-amin').value;
     RULES.aGroup.max = +document.getElementById('r-amax').value;
     RULES.hybridA.max = +document.getElementById('r-hymax').value;
-    RULES.yardTolerance = +document.getElementById('r-tol').value;
-    RULES.rareMaxPct = +document.getElementById('r-rare').value;
-    RULES.flipWindowPct = +document.getElementById('r-flip').value;
-    RULES.nudge = +document.getElementById('r-nudge').value;
+    RULES.weekendRepeatMaxPct = +document.getElementById('r-wknd').value;
+    RULES.nudge = document.getElementById('r-learn').checked ? 1 : 0;
+    delete RULES.yardTolerance; delete RULES.rareMaxPct; delete RULES.flipWindowPct;
     const parseList = id => [...new Set(document.getElementById(id).value.split(/[^0-9]+/).filter(Boolean).map(Number).filter(n=>n>=1&&n<=18))];
     RULES.aGroup.holes = parseList('r-agroup');
     RULES.aGroup.front = RULES.aGroup.holes.filter(h=>h<=9);
