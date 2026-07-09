@@ -71,6 +71,9 @@ td:first-child,th:first-child{text-align:left}
 .set-grid label.on{display:flex;justify-content:center}
 .rule-grid{display:grid;grid-template-columns:1fr 84px;gap:8px;align-items:center;font-size:14px}
 .rule-grid input{border:1px solid var(--line);border-radius:7px;padding:8px;font-size:14px;text-align:center;width:100%}
+.rl{margin-top:10px}
+.rl label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.rl input{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:14px}
 .hist-item{padding:10px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer}
 .hist-item .d{font-weight:700}
 .hist-item .s{font-size:12px;color:var(--muted)}
@@ -135,11 +138,12 @@ td:first-child,th:first-child{text-align:left}
     <div class="card">
       <h2 style="margin-top:0">Rules</h2>
       <div class="rule-grid" id="ruleGrid"></div>
-      <div class="muted" style="margin-top:10px">Back-pad group: holes 2, 5, 6, 7, 9, 13, 16, 18 · Hybrid A-cap group: 1, 2, 7, 8, 14 · Par-3 pair: 3 &amp; 8.</div>
+      <div id="ruleLists"></div>
+      <div class="muted" style="margin-top:10px">Hole lists are comma-separated (1–18). The front/back split of the back-pad group is figured automatically from the hole numbers.</div>
     </div>
     <div class="card">
       <h2 style="margin-top:0">Holes — pad %, yardage, availability</h2>
-      <div class="muted">Percentages are the target mix per hole (should total 100). Yardages start as the posted scorecard number for every pad — replace with real pad yardages when you have them and the total-yardage checks come alive. Unchecking a pad removes it from the generator (it stays tappable for manual picks).</div>
+      <div class="muted">Percentages are the target mix per hole (should total 100). Yardages are estimates built from the scorecard (pad A = posted Blue, most-forward pad = posted White, middle pad in between) — replace with real measured pad yardages when Sean has them. Unchecking a pad removes it from the generator (it stays tappable for manual picks).</div>
       <div id="setHoles"></div>
     </div>
     <div class="fab"><button class="btn" onclick="saveSettings()">Save settings</button></div>
@@ -350,14 +354,15 @@ function warningsFor(date){
   const {blue,hy,nset} = totals(asg);
   if (nset<18) out.push(`${18-nset} hole${18-nset>1?'s':''} not set yet.`);
   if (nset===18){
-    if (onA.length<g.min) out.push(`Only ${onA.length} of the back-pad group (2,5,6,7,9,13,16,18) on A — target is ${g.min}–${g.max}.`);
+    if (onA.length<g.min) out.push(`Only ${onA.length} of the back-pad group (${g.holes.join(', ')}) on A — target is ${g.min}–${g.max}.`);
     if (onA.length>g.max) out.push(`${onA.length} of the back-pad group on A — target is ${g.min}–${g.max}.`);
     if (onA.length>=g.min){
-      if (!onA.some(h=>g.front.includes(h))) out.push('All the A pads in the group are on the back nine — put at least one out front.');
-      if (!onA.some(h=>g.back.includes(h))) out.push('All the A pads in the group are on the front nine — put at least one on the back.');
+      const front = g.holes.filter(h=>h<=9), back = g.holes.filter(h=>h>=10);
+      if (front.length && !onA.some(h=>front.includes(h))) out.push('All the A pads in the group are on the back nine — put at least one out front.');
+      if (back.length && !onA.some(h=>back.includes(h))) out.push('All the A pads in the group are on the front nine — put at least one on the back.');
     }
     const hybA = hyr.holes.filter(h=>asg[h]==='A');
-    if (hybA.length>hyr.max) out.push(`${hybA.length} of the Hybrid big-difference holes (1,2,7,8,14) on A — max is ${hyr.max}.`);
+    if (hybA.length>hyr.max) out.push(`${hybA.length} of the Hybrid big-difference holes (${hyr.holes.join(', ')}) on A — max is ${hyr.max}.`);
     if (asg[a] && asg[a]===asg[b]) out.push(`Holes ${a} and ${b} are on the same pad — they may play the same distance.`);
     if (Math.abs(blue-RULES.posted.blue)>tol) out.push(`Blue total ${blue} is ${blue>RULES.posted.blue?'+':''}${blue-RULES.posted.blue} vs posted ${RULES.posted.blue}.`);
     if (Math.abs(hy-RULES.posted.hybrid)>tol) out.push(`Hybrid total ${hy} is ${hy>RULES.posted.hybrid?'+':''}${hy-RULES.posted.hybrid} vs posted ${RULES.posted.hybrid}.`);
@@ -393,7 +398,7 @@ function renderPlan(){
     return `<div class="hole">
       <div class="top">
         <div class="hnum">${h.hole}</div>
-        <div class="hmeta">Par ${h.par} · ${yds} yds ${h.hybrid_blue?'<span class="chip">HY-BLUE</span>':''}</div>
+        <div class="hmeta">Par ${h.par} · ${yds} yds ${RULES.hybridBlueHoles.includes(h.hole)?'<span class="chip">HY-BLUE</span>':''}</div>
         <div class="pads">${PADS.map(pp=>`
           <button class="pad ${p===pp?'sel':''} ${h.pads[pp].on?'':'off'}" onclick="pickPad(${h.hole},'${pp}')">${pp}<small>${h.pads[pp].pct}%</small></button>`).join('')}
         </div>
@@ -518,9 +523,14 @@ function renderSettings(){
     <div>"Rare pad" threshold (%)</div><input type="number" id="r-rare" value="${RULES.rareMaxPct}">
     <div>"Even split" window (%)</div><input type="number" id="r-flip" value="${RULES.flipWindowPct}">
     <div>Nudge strength (0 = pure random)</div><input type="number" step="0.1" id="r-nudge" value="${RULES.nudge}">`;
+  document.getElementById('ruleLists').innerHTML = `
+    <div class="rl"><label>Back-pad group holes (the min/max-on-A rule)</label><input id="r-agroup" value="${RULES.aGroup.holes.join(', ')}"></div>
+    <div class="rl"><label>Hybrid A-cap group holes (the max-on-A rule)</label><input id="r-hygroup" value="${RULES.hybridA.holes.join(', ')}"></div>
+    <div class="rl"><label>Par-3 pair — keep on different pads</label><input id="r-pair" value="${RULES.par3Pair.join(', ')}"></div>
+    <div class="rl"><label>Hybrid course: holes that play the Blue tee</label><input id="r-hyblue" value="${RULES.hybridBlueHoles.join(', ')}"></div>`;
   document.getElementById('setHoles').innerHTML = HOLES.map(h=>`
     <div class="set-hole" data-hole="${h.hole}">
-      <div class="hd">Hole ${h.hole} <span style="font-weight:400;color:var(--muted);font-size:12px">par ${h.par} · posted ${h.blue_posted} ${h.hybrid_blue?'· HY-BLUE':''}</span></div>
+      <div class="hd">Hole ${h.hole} <span style="font-weight:400;color:var(--muted);font-size:12px">par ${h.par} · posted ${h.blue_posted} ${RULES.hybridBlueHoles.includes(h.hole)?'· HY-BLUE':''}</span></div>
       <div class="set-grid">
         <div></div><div class="colhd">A (back)</div><div class="colhd">B</div><div class="colhd">C (front)</div>
         <div class="colhd">On</div>${PADS.map(p=>`<label class="on"><input type="checkbox" data-f="on" data-p="${p}" ${h.pads[p].on?'checked':''}></label>`).join('')}
@@ -538,6 +548,14 @@ async function saveSettings(){
     RULES.rareMaxPct = +document.getElementById('r-rare').value;
     RULES.flipWindowPct = +document.getElementById('r-flip').value;
     RULES.nudge = +document.getElementById('r-nudge').value;
+    const parseList = id => [...new Set(document.getElementById(id).value.split(/[^0-9]+/).filter(Boolean).map(Number).filter(n=>n>=1&&n<=18))];
+    RULES.aGroup.holes = parseList('r-agroup');
+    RULES.aGroup.front = RULES.aGroup.holes.filter(h=>h<=9);
+    RULES.aGroup.back = RULES.aGroup.holes.filter(h=>h>=10);
+    RULES.hybridA.holes = parseList('r-hygroup');
+    const pair = parseList('r-pair');
+    if (pair.length===2) RULES.par3Pair = pair;
+    RULES.hybridBlueHoles = parseList('r-hyblue');
     await sb('tee_config?id=eq.rules', {method:'PATCH', body: JSON.stringify({data:RULES})});
     for (const el of document.querySelectorAll('.set-hole')){
       const hole = +el.dataset.hole, h = holeByNum(hole);
