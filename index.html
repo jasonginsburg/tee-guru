@@ -49,7 +49,10 @@ input[type=date]{border:1px solid var(--line);border-radius:8px;padding:9px 10px
 .savedband{background:var(--green-lite);border:1px solid #ddd0a5;color:var(--green);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:14px;display:none;align-items:center;justify-content:space-between}
 .hole{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
 .hole .top{display:flex;align-items:center;gap:10px}
-.hnum{font-size:17px;font-weight:800;width:30px;color:var(--green)}
+.hnum{font-size:17px;font-weight:800;width:30px;color:var(--green);cursor:pointer}
+.hphoto{margin-top:8px}
+.hphoto img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}
+.hphoto .muted{font-size:11px;margin-top:3px;text-align:right}
 .hmeta{font-size:12px;color:var(--muted);flex:1;line-height:1.3}
 .chip{display:inline-block;background:var(--green-lite);color:var(--green);font-size:10px;font-weight:700;border-radius:5px;padding:1px 5px;vertical-align:1px}
 .pads{display:flex;gap:6px}
@@ -214,7 +217,7 @@ td:first-child,th:first-child{text-align:left}
         <li>A saved day is locked so nobody bumps it by accident. "Edit day" reopens it.</li>
         <li>Pad yardages are estimates for now, so the Blue/Hybrid totals are ballpark until real measured numbers go into Settings.</li>
       </ul>
-      <div class="muted" style="margin-top:16px;text-align:center">Tee Guru v1.3 — July 8, 2026</div>
+      <div class="muted" style="margin-top:16px;text-align:center">Tee Guru v1.4 — July 19, 2026</div>
     </div>
   </div>
 </main>
@@ -462,7 +465,7 @@ function renderPlan(){
     const yds = p ? (h.pads[p]?.yds ?? h.blue_posted) : h.blue_posted;
     return `<div class="hole">
       <div class="top">
-        <div class="hnum">${h.hole}</div>
+        <div class="hnum" onclick="togglePhoto(${h.hole})" title="Tap for tee photo">${h.hole}</div>
         <div class="hmeta">Par ${h.par} · ${yds} yds ${RULES.hybridBlueHoles.includes(h.hole)?'<span class="chip">HY-BLUE</span>':''}</div>
         <div class="pads">${PADS.map(pp=>`
           <button class="pad ${p===pp?'sel':''} ${h.pads[pp].on?'':'off'}" onclick="pickPad(${h.hole},'${pp}')">${pp}<small>${h.pads[pp].pct}%</small></button>`).join('')}
@@ -470,6 +473,7 @@ function renderPlan(){
         <button class="lockbtn ${wk.locks[h.hole]?'locked':''}" title="Lock this hole" onclick="toggleLock(${h.hole})">${wk.locks[h.hole]?'🔒':'🔓'}</button>
       </div>
       ${h.note?`<div class="hnote">${h.note}</div>`:''}
+      ${openPhotos.has(h.hole)?`<div class="hphoto"><img src="${TEE_PHOTO_URL}hole-${h.hole}.jpg" loading="lazy" alt="Hole ${h.hole} tee complex"><div class="muted">Satellite view of the ${h.hole} tee complex — tap the hole number to hide</div></div>`:''}
     </div>`;
   }).join('');
   const {blue,hy,nset} = totals(asg);
@@ -498,6 +502,9 @@ function renderPlan(){
   document.getElementById('wk-1').textContent = mode==='weekend' ? `Sun ${fmtDate(addDays(document.getElementById('datePick').value,1)).replace(/^\w+, /,'')}` : 'Sunday';
 }
 
+const TEE_PHOTO_URL = 'https://tkgmuxjrecmyjzissgue.supabase.co/storage/v1/object/public/tee-photos/';
+const openPhotos = new Set();
+function togglePhoto(hole){ openPhotos.has(hole) ? openPhotos.delete(hole) : openPhotos.add(hole); renderPlan(); }
 function pickPad(hole,p){ const wk=getWork(activeDate()); wk.assignments[hole]=p; renderPlan(); }
 function toggleLock(hole){ const wk=getWork(activeDate()); wk.locks[hole]=!wk.locks[hole]; if(!wk.locks[hole]) delete wk.locks[hole]; renderPlan(); }
 function unlockDay(){ getWork(activeDate()).editing = true; renderPlan(); }
